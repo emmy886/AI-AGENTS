@@ -1,0 +1,259 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>SpatialOccupancyAgent | AI Vision & Spatial Intelligence</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@300;400;500;600;700;800&family=JetBrains+Mono:wght@400;500;600&display=swap" rel="stylesheet">
+  <link rel="stylesheet" href="style.css">
+</head>
+<body>
+  <!-- Header Navbar -->
+  <header class="app-header">
+    <div class="header-brand">
+      <div class="brand-icon">
+        <svg viewBox="0 0 24 24" width="24" height="24" fill="none" stroke="currentColor" stroke-width="2">
+          <circle cx="12" cy="12" r="10"></circle>
+          <path d="M12 2a14.5 14.5 0 0 0 0 20 14.5 14.5 0 0 0 0-20"></path>
+          <path d="M2 12h20"></path>
+          <circle cx="12" cy="12" r="3" fill="currentColor"></circle>
+        </svg>
+      </div>
+      <div>
+        <div class="brand-title">SpatialOccupancyAgent</div>
+        <div class="brand-subtitle">Vision & Spatial Intelligence Reasoning Platform</div>
+      </div>
+    </div>
+
+    <div class="header-actions">
+      <div class="status-indicator live" id="system-status">
+        <span class="status-dot"></span>
+        <span class="status-text">System Active &bull; Localhost:5000</span>
+      </div>
+      <button class="btn btn-outline" id="btn-api-modal" title="Configure OpenAI API Key">
+        <svg viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="currentColor" stroke-width="2">
+          <path d="M12.22 2h-.44a2 2 0 0 0-2 2v.18a2 2 0 0 1-1 1.73l-.43.25a2 2 0 0 1-2 0l-.15-.08a2 2 0 0 0-2.73.73l-.22.38a2 2 0 0 0 .73 2.73l.15.1a2 2 0 0 1 1 1.72v.51a2 2 0 0 1-1 1.74l-.15.09a2 2 0 0 0-.73 2.73l.22.38a2 2 0 0 0 2.73.73l.15-.08a2 2 0 0 1 2 0l.43.25a2 2 0 0 1 1 1.73V20a2 2 0 0 0 2 2h.44a2 2 0 0 0 2-2v-.18a2 2 0 0 1 1-1.73l.43-.25a2 2 0 0 1 2 0l.15.08a2 2 0 0 0 2.73-.73l.22-.39a2 2 0 0 0-.73-2.73l-.15-.08a2 2 0 0 1-1-1.74v-.5a2 2 0 0 1 1-1.74l.15-.09a2 2 0 0 0 .73-2.73l-.22-.38a2 2 0 0 0-2.73-.73l-.15.08a2 2 0 0 1-2 0l-.43-.25a2 2 0 0 1-1-1.73V4a2 2 0 0 0-2-2z"></path>
+          <circle cx="12" cy="12" r="3"></circle>
+        </svg>
+        <span id="api-status-label">API Key</span>
+      </button>
+      <button class="btn btn-primary" id="btn-run-analysis">
+        <svg viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="currentColor" stroke-width="2">
+          <polygon points="5 3 19 12 5 21 5 3"></polygon>
+        </svg>
+        <span>Run Spatial Agent</span>
+      </button>
+    </div>
+  </header>
+
+  <!-- Main Container -->
+  <main class="dashboard-grid">
+    <!-- Left Column: Spatial Visualizer & Radar Map -->
+    <section class="visualizer-column">
+      <!-- Image Viewport Card -->
+      <div class="card viewport-card">
+        <div class="card-header">
+          <div class="card-title-group">
+            <h3>Camera Viewport & Spatial Grounding</h3>
+            <span class="badge badge-cyan" id="active-scene-badge">Office Cubicle Workspace</span>
+          </div>
+          <div class="viewport-controls">
+            <label class="btn btn-sm btn-ghost file-upload-label" title="Upload custom image">
+              <svg viewBox="0 0 24 24" width="14" height="14" fill="none" stroke="currentColor" stroke-width="2">
+                <path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"></path>
+                <polyline points="17 8 12 3 7 8"></polyline>
+                <line x1="12" y1="3" x2="12" y2="15"></line>
+              </svg>
+              Upload Image
+              <input type="file" id="image-file-input" accept="image/*" style="display:none;">
+            </label>
+            <div class="segmented-control">
+              <button class="seg-btn active" data-preset="cubicle">Preset: Cubicle</button>
+              <button class="seg-btn" data-preset="meeting">Meeting Room</button>
+              <button class="seg-btn" data-preset="open">Open Office</button>
+            </div>
+          </div>
+        </div>
+
+        <div class="image-viewport-container" id="viewport-container">
+          <img id="scene-image" src="/office_test_image.jpg" alt="Office workspace test image">
+          <div class="bounding-overlay" id="bounding-overlay">
+            <!-- Dynamic markers generated via JS -->
+          </div>
+          <div class="camera-lens-badge">CAM_01 &bull; 78&deg; HFOV</div>
+        </div>
+      </div>
+
+      <!-- 2D Spatial Bird's-Eye Radar Map -->
+      <div class="card radar-card">
+        <div class="card-header">
+          <div class="card-title-group">
+            <h3>Top-Down Spatial Radar (Bird's-Eye View)</h3>
+            <span class="card-subtitle">Estimates depth, lateral azimuth, and relative orientation</span>
+          </div>
+          <div class="radar-legend">
+            <span class="legend-item"><span class="dot dot-human"></span> Human Occupant</span>
+            <span class="legend-item"><span class="dot dot-object"></span> Tracked Object</span>
+            <span class="legend-item"><span class="dot dot-partition"></span> Partition Barrier</span>
+          </div>
+        </div>
+        <div class="radar-canvas-container">
+          <canvas id="radar-canvas" width="600" height="320"></canvas>
+          <div class="radar-hud">
+            <div class="hud-item">FOV: <strong>78&deg;</strong></div>
+            <div class="hud-item">MAX RANGE: <strong>6.0m</strong></div>
+            <div class="hud-item">GRID: <strong>1.0m Rings</strong></div>
+          </div>
+        </div>
+      </div>
+    </section>
+
+    <!-- Right Column: Metrics, Insights & Entities Inspector -->
+    <section class="inspector-column">
+      <!-- Metric Highlights -->
+      <div class="metrics-row">
+        <div class="metric-card metric-occupants">
+          <div class="metric-icon">
+            <svg viewBox="0 0 24 24" width="22" height="22" fill="none" stroke="currentColor" stroke-width="2">
+              <path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"></path>
+              <circle cx="9" cy="7" r="4"></circle>
+              <path d="M23 21v-2a4 4 0 0 0-3-3.87"></path>
+              <path d="M16 3.13a4 4 0 0 1 0 7.75"></path>
+            </svg>
+          </div>
+          <div class="metric-content">
+            <div class="metric-label">Total Occupants</div>
+            <div class="metric-value" id="val-occupants">2</div>
+            <div class="metric-foot" id="occupants-note">Seated behind partition</div>
+          </div>
+        </div>
+
+        <div class="metric-card metric-objects">
+          <div class="metric-icon">
+            <svg viewBox="0 0 24 24" width="22" height="22" fill="none" stroke="currentColor" stroke-width="2">
+              <rect x="2" y="3" width="20" height="14" rx="2" ry="2"></rect>
+              <line x1="8" y1="21" x2="16" y2="21"></line>
+              <line x1="12" y1="17" x2="12" y2="21"></line>
+            </svg>
+          </div>
+          <div class="metric-content">
+            <div class="metric-label">Objects Tracked</div>
+            <div class="metric-value" id="val-objects">5</div>
+            <div class="metric-foot">Dividers, chairs & doorway</div>
+          </div>
+        </div>
+
+        <div class="metric-card metric-depth">
+          <div class="metric-icon">
+            <svg viewBox="0 0 24 24" width="22" height="22" fill="none" stroke="currentColor" stroke-width="2">
+              <path d="M3 3v18h18"></path>
+              <path d="m19 9-5 5-4-4-3 3"></path>
+            </svg>
+          </div>
+          <div class="metric-content">
+            <div class="metric-label">Depth Range</div>
+            <div class="metric-value" id="val-depth">0.8 - 4.5m</div>
+            <div class="metric-foot">Accurate Spatial Bounds</div>
+          </div>
+        </div>
+      </div>
+
+      <!-- Spatial Context Summary Card -->
+      <div class="card summary-card">
+        <div class="card-header">
+          <h3>Room Context Summary</h3>
+          <span class="badge badge-purple">Spatial Reasoning Output</span>
+        </div>
+        <p class="summary-text" id="val-summary">
+          Office cubicle layout partitioned by acoustic frosted glass dividers. Exactly two human occupants are detected: one in the left cubicle bay wearing a high-visibility orange cap (~2.0m), and one in the right background cubicle bay wearing eyeglasses (~3.1m).
+        </p>
+      </div>
+
+      <!-- Entity Inspector List -->
+      <div class="card entities-card">
+        <div class="card-header">
+          <div class="card-title-group">
+            <h3>Tracked Entities</h3>
+            <span class="counter-pill" id="entity-count-pill">5</span>
+          </div>
+          <div class="filter-tabs">
+            <button class="filter-tab active" data-filter="all">All</button>
+            <button class="filter-tab" data-filter="human">Humans</button>
+            <button class="filter-tab" data-filter="object">Objects</button>
+          </div>
+        </div>
+
+        <div class="entities-list" id="entities-list">
+          <!-- Dynamically populated via JS -->
+        </div>
+      </div>
+
+      <!-- Raw JSON & Schema Tabs -->
+      <div class="card json-card">
+        <div class="card-header">
+          <div class="tab-buttons">
+            <button class="tab-btn active" data-tab="json">Structured JSON Output</button>
+            <button class="tab-btn" data-tab="schema">Strict Schema Definition</button>
+          </div>
+          <button class="btn btn-xs btn-outline" id="btn-copy-json" title="Copy JSON">
+            <svg viewBox="0 0 24 24" width="12" height="12" fill="none" stroke="currentColor" stroke-width="2">
+              <rect x="9" y="9" width="13" height="13" rx="2" ry="2"></rect>
+              <path d="M5 15H4a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2h9a2 2 0 0 1 2 2v1"></path>
+            </svg>
+            Copy
+          </button>
+        </div>
+        <div class="tab-content">
+          <pre id="json-viewer" class="code-block"><code>Loading structured data...</code></pre>
+          <pre id="schema-viewer" class="code-block" style="display:none;"><code>Loading schema...</code></pre>
+        </div>
+      </div>
+    </section>
+  </main>
+
+  <!-- API Key Modal -->
+  <div class="modal-backdrop" id="api-modal" style="display:none;">
+    <div class="modal-card">
+      <div class="modal-header">
+        <h3>OpenAI API Configuration</h3>
+        <button class="modal-close" id="btn-close-modal">&times;</button>
+      </div>
+      <div class="modal-body">
+        <p class="modal-desc">
+          The <code>SpatialOccupancyAgent</code> uses OpenAI <code>gpt-4o</code> with structured JSON schema outputs. Provide your API key to make live vision inference requests, or use the high-fidelity simulator mode if you don't have one right now.
+        </p>
+        <div class="form-group">
+          <label for="input-api-key">OpenAI API Key (sk-...)</label>
+          <input type="password" id="input-api-key" placeholder="sk-proj-..." class="form-input">
+          <small class="form-hint">Stored strictly in local browser memory. Never shared externally.</small>
+        </div>
+        <div class="simulation-toggle-row">
+          <div>
+            <strong>Offline Simulation Mode</strong>
+            <p class="text-muted">Simulate instant spatial grounding and strict schema verification without spending API credits.</p>
+          </div>
+          <label class="switch">
+            <input type="checkbox" id="toggle-sim-mode" checked>
+            <span class="slider round"></span>
+          </label>
+        </div>
+      </div>
+      <div class="modal-footer">
+        <button class="btn btn-ghost" id="btn-cancel-modal">Cancel</button>
+        <button class="btn btn-primary" id="btn-save-key">Save Settings</button>
+      </div>
+    </div>
+  </div>
+
+  <footer class="app-footer">
+    <div class="footer-content">
+      <span>SpatialOccupancyAgent C# / Web Integration &bull; Powered by OpenAI Vision Structured Outputs</span>
+      <span class="footer-meta">C# Program: <code>SpatialOccupancyAgent.cs</code> | Localhost UI Port: <code>5000</code></span>
+    </div>
+  </footer>
+
+  <script src="app.js"></script>
+</body>
+</html>
