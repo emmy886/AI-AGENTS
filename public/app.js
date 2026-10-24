@@ -323,7 +323,7 @@ function setupEventListeners() {
 // Trigger Agent Analysis
 async function triggerAnalysis() {
   btnRunAnalysis.disabled = true;
-  btnRunAnalysis.innerHTML = `<span class="status-dot"></span> Analyzing Spatial Layout...`;
+  btnRunAnalysis.innerHTML = `<span class="status-dot"></span> <span class="btn-label-long">Analyzing Spatial Layout...</span><span class="btn-label-short">Analyzing...</span>`;
 
   try {
     const apiKey = localStorage.getItem("openai_api_key");
@@ -361,10 +361,11 @@ async function triggerAnalysis() {
   } finally {
     btnRunAnalysis.disabled = false;
     btnRunAnalysis.innerHTML = `
-      <svg viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="currentColor" stroke-width="2">
+      <svg viewBox="0 0 24 24" width="15" height="15" fill="none" stroke="currentColor" stroke-width="2">
         <polygon points="5 3 19 12 5 21 5 3"></polygon>
       </svg>
-      <span>Run Spatial Agent</span>
+      <span class="btn-label-long">Run Spatial Agent</span>
+      <span class="btn-label-short">Run Agent</span>
     `;
   }
 }
@@ -411,7 +412,7 @@ function renderEntitiesList(entities) {
   });
 
   if (filtered.length === 0) {
-    entitiesList.innerHTML = `<div class="text-muted" style="text-align:center; padding: 1rem;">No entities matching filter</div>`;
+    entitiesList.innerHTML = `<div class="text-muted" style="text-align:center; padding: 1.5rem 1rem;">No entities matching filter</div>`;
     return;
   }
 
@@ -437,7 +438,7 @@ function renderEntitiesList(entities) {
       </div>
       <div class="entity-info">
         <div class="entity-name">
-          ${entity.entity_name}
+          <span class="entity-title">${entity.entity_name}</span>
           <span class="badge ${isHuman ? 'badge-cyan' : 'badge-purple'}">${entity.entity_type}</span>
         </div>
         <div class="entity-meta">${entity.relative_position}</div>
@@ -473,8 +474,10 @@ function renderBoundingBoxes(entities) {
     box.style.height = `${coords.h}%`;
 
     const tag = document.createElement("div");
-    tag.className = "spatial-tag";
-    tag.innerHTML = `<strong>${entity.entity_name}</strong> &bull; ${entity.estimated_distance_meters}m`;
+    // If box is close to top border (< 15%), display tag inside to avoid clipping
+    const isNearTop = coords.y < 14;
+    tag.className = `spatial-tag ${isNearTop ? 'tag-inside' : ''}`;
+    tag.innerHTML = `<strong>${entity.entity_name}</strong> <span class="tag-sep">&bull;</span> ${entity.estimated_distance_meters}m`;
     box.appendChild(tag);
 
     boundingOverlay.appendChild(box);
@@ -500,14 +503,37 @@ function startRadarLoop() {
   requestAnimationFrame(draw);
 }
 
+// Dynamic Canvas Resizing for sharp rendering across all screen densities & widths
+function resizeRadarCanvas() {
+  const container = canvas.parentElement;
+  if (!container) return;
+  const rect = container.getBoundingClientRect();
+  const dpr = Math.min(window.devicePixelRatio || 1, 2); // Cap at 2 for performance
+  const displayWidth = Math.max(260, Math.floor(rect.width));
+  const displayHeight = Math.max(220, Math.floor(rect.height || 280));
+
+  const targetWidth = Math.floor(displayWidth * dpr);
+  const targetHeight = Math.floor(displayHeight * dpr);
+
+  if (canvas.width !== targetWidth || canvas.height !== targetHeight) {
+    canvas.width = targetWidth;
+    canvas.height = targetHeight;
+  }
+}
+
 function renderRadarCanvas() {
-  const w = canvas.width;
-  const h = canvas.height;
+  resizeRadarCanvas();
+  const dpr = Math.min(window.devicePixelRatio || 1, 2);
+  const w = canvas.width / dpr;
+  const h = canvas.height / dpr;
+
+  ctx.save();
+  ctx.scale(dpr, dpr);
   ctx.clearRect(0, 0, w, h);
 
   const cx = w / 2;
-  const cy = h - 25; // Camera viewpoint at bottom center
-  const maxRadius = h - 45;
+  const cy = h - 22; // Camera viewpoint at bottom center
+  const maxRadius = Math.min(h - 42, (w / 2) * 1.08);
   const maxRangeMeters = 6.0;
 
   // Concentric Distance Rings (1m, 2m, 3m, 4m, 5m)
@@ -520,9 +546,9 @@ function renderRadarCanvas() {
     ctx.stroke();
 
     // Distance labels
-    ctx.fillStyle = "rgba(148, 163, 184, 0.55)";
-    ctx.font = "9px 'JetBrains Mono', monospace";
-    ctx.fillText(`${r}m`, cx + radiusPx - 14, cy - 4);
+    ctx.fillStyle = "rgba(148, 163, 184, 0.6)";
+    ctx.font = `${w < 380 ? 8 : 9}px 'JetBrains Mono', monospace`;
+    ctx.fillText(`${r}m`, cx + radiusPx - (w < 380 ? 12 : 14), cy - 4);
   }
 
   // Camera Field of View (FOV) cone (78 deg)
@@ -568,8 +594,8 @@ function renderRadarCanvas() {
   ctx.shadowBlur = 0;
 
   ctx.fillStyle = "#94a3b8";
-  ctx.font = "9px 'Plus Jakarta Sans', sans-serif";
-  ctx.fillText("CAM_VIEWPOINT", cx - 35, cy + 18);
+  ctx.font = `${w < 380 ? 8 : 9}px 'Plus Jakarta Sans', sans-serif`;
+  ctx.fillText("CAM_VIEWPOINT", cx - (w < 380 ? 30 : 35), cy + 16);
 
   // Plot Entities
   if (currentReport && currentReport.entities) {
@@ -600,20 +626,33 @@ function renderRadarCanvas() {
       // Entity glow
       ctx.fillStyle = color;
       ctx.shadowColor = color;
-      ctx.shadowBlur = isHuman ? 12 : 6;
+      ctx.shadowBlur = isHuman ? 10 : 5;
       ctx.beginPath();
-      ctx.arc(ex, ey, isHuman ? 6 : 4.5, 0, Math.PI * 2);
+      ctx.arc(ex, ey, isHuman ? (w < 380 ? 5 : 6) : (w < 380 ? 4 : 4.5), 0, Math.PI * 2);
       ctx.fill();
       ctx.shadowBlur = 0;
 
-      // Label
+      // Label with adaptive size & position
       ctx.fillStyle = "#ffffff";
-      ctx.font = "10px 'Plus Jakarta Sans', sans-serif";
-      const label = isHuman ? entity.entity_name.split(" ")[0] : entity.entity_name.split(" ")[0];
-      ctx.fillText(`${label} (${entity.estimated_distance_meters}m)`, ex + 8, ey + 3);
+      const labelFontSize = w < 400 ? 8.5 : 9.5;
+      ctx.font = `${labelFontSize}px 'Plus Jakarta Sans', sans-serif`;
+      const label = entity.entity_name.split(" ")[0];
+      const textX = ex > cx + 35 && w < 420 ? ex - 48 : ex + 7;
+      ctx.fillText(`${label} (${entity.estimated_distance_meters}m)`, textX, ey + 3);
     });
   }
+
+  ctx.restore();
 }
+
+// Window resize and orientation listeners
+window.addEventListener("resize", () => {
+  renderRadarCanvas();
+});
+
+window.addEventListener("orientationchange", () => {
+  setTimeout(renderRadarCanvas, 150);
+});
 
 // Start application
 window.addEventListener("DOMContentLoaded", init);
